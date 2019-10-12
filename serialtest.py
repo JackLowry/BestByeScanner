@@ -16,7 +16,7 @@ def api_call(upc):
 		api_key = f.read().strip()
 	call_str = call_str.format(upc,api_key)
 	response = requests.get(call_str, )
-	with open('serialOutput.pdf', 'wb') as f:
+	with open('products/{}.pdf'.format(upc), 'w+b') as f:
 		f.write(response.content)
 		
 
