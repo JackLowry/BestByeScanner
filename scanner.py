@@ -21,8 +21,8 @@ def bluetooth_server():
     advertise_service( server_sock, "AquaPiServer",
                        service_id = uuid,
                        service_classes = [ uuid, SERIAL_PORT_CLASS ],
-                       profiles = [ SERIAL_PORT_PROFILE ] 
-    #                   protocols = [ OBEX_UUID ] 
+                       profiles = [ SERIAL_PORT_PROFILE ]
+    #                   protocols = [ OBEX_UUID ]
                         )
     while True:
 
@@ -36,18 +36,26 @@ def bluetooth_server():
             if len(data) == 0: break
             print "received [%s]" % data
 
-            if data == 'temp':
-                data = str(read_temp())+'!'
-            elif data == 'lightOn':
-                GPIO.output(17,False)
-                data = 'light on!'
-            elif data == 'lightOff':
-                GPIO.output(17,True)
-                data = 'light off!'
-            else:
-                data = 'WTF!' 
-                client_sock.send(data)
-                print "sending [%s]" % data
+            data = data.split('\n')
+            app_items = data[1].split(' ')
+            removed_items = data[1].split(' ')
+
+            for i in removed_items:
+                if i in curr_items:
+                    remove_item(i)
+
+            tmp_curr_items = curr_items
+            app_add_items = ""
+            for i in app_items:
+                if i in tmp_curr_items:
+                    tmp_curr_items.remove(i)
+                else:
+                    add_item(i)
+                    app_add_items += i + " "
+
+            app_add_items.strip()
+            client_sock.send(app_add_items)
+            print "sending [%s]" % data
 
         except IOError:
             pass
@@ -61,7 +69,7 @@ def bluetooth_server():
             print "all done"
 
             break
-        
+
 def api_call(upc):
     call_str = "https://api.barcodelookup.com/v2/products?barcode={}&formatted=y&key={}"
     api_key = ""
@@ -73,12 +81,12 @@ def api_call(upc):
     response["quant"] = 1
     with open('products/{}'.format(upc), 'w+b') as f:
         json.dump(response,f)
-        
+
 def parse_json(upc):
     with open('products/' + upc) as f:
         return json.load(f)
 
-        
+
 def remove_item(upc_code):
     curr_items.remove(upc_code)
     if os.path.exists('products/' + upc_code):
@@ -130,7 +138,7 @@ while True:
         add_item(remove_upc)
         remove_upc = None
     while wipi.serialDataAvail(serial) != 0:
-        data = chr(wipi.serialGetchar(serial)) 
+        data = chr(wipi.serialGetchar(serial))
         upc_code += data.strip()
         if(wipi.serialDataAvail(serial) == 0):
             if(upc_code in curr_items):
@@ -143,8 +151,7 @@ while True:
                     remove_upc = upc_code
             else:
                 add_item(upc_code)
-                
-            upc_code = ""           
+
+            upc_code = ""
     time.sleep(1)
     print curr_items
-
